@@ -9,7 +9,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -26,31 +25,16 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import kotlinx.coroutines.flow.collectLatest
-import com.aryandi.requestapp.ui.RequestListViewModel
-import com.aryandi.requestapp.ui.RequestResult
 
 private val LightBlue = Color(0xF0F8FFFF) // Very light blue
 private val TitleBlue = Color(0xFF396882) // Matches your mockup
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen() {
+fun RequestListScreen(onCreateNewRequest: () -> Unit = {}) {
     val viewModel: RequestListViewModel = hiltViewModel()
 
     val snackbarHostState = remember { SnackbarHostState() }
-    val context = LocalContext.current
-
-    // Listen to results and show snackbar
-    LaunchedEffect(Unit) {
-        viewModel.resultFlow.collectLatest { result ->
-            val msg = when (result) {
-                is RequestResult.Success -> result.message
-                is RequestResult.Error -> result.error
-                else -> "Unknown result"
-            }
-            snackbarHostState.showSnackbar(msg)
-        }
-    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
@@ -75,7 +59,7 @@ fun HomeScreen() {
                 )
                 Spacer(modifier = Modifier.height(48.dp))
 
-                // Logo placeholder
+                // Centered circular logo placeholder
                 Box(
                     modifier = Modifier
                         .size(220.dp)
@@ -83,15 +67,17 @@ fun HomeScreen() {
                         .background(Color.White),
                     contentAlignment = Alignment.Center
                 ) {
-                    // Place your logo image here when available
+                    // Replace with your Image composable when available
+                    Text(
+                        text = "Logo",
+                        color = TitleBlue,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 36.sp
+                    )
                 }
                 Spacer(modifier = Modifier.height(72.dp))
                 Button(
-                    onClick = {
-                        // Simulate a random result
-                        val isSuccess = (0..1).random() == 1
-                        viewModel.simulateRequest(isSuccess)
-                    },
+                    onClick = onCreateNewRequest,
                     modifier = Modifier
                         .padding(horizontal = 24.dp)
                         .fillMaxWidth()
@@ -109,6 +95,6 @@ fun HomeScreen() {
 
 @Preview(showBackground = true)
 @Composable
-fun PreviewHomeScreen() {
-    HomeScreen()
+fun PreviewRequestListScreen() {
+    RequestListScreen()
 }
