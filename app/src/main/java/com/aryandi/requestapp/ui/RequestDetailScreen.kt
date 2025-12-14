@@ -11,6 +11,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -28,6 +29,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.KeyboardDoubleArrowRight
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 
 private val ScreenBlue = Color(0xFF436C78)
 private val PanelBlue = Color(0xFF345966)
@@ -36,13 +39,22 @@ private val ApproveArrow = Color(0xFF3CA1AF)
 
 @Composable
 fun RequestDetailScreen(
-    onBack: () -> Unit = {},
-    onApprove: () -> Unit = {},
-    onReject: () -> Unit = {}
+    onApproved: () -> Unit = {},
+    onRejected: () -> Unit = {},
+    onBack: () -> Unit = {}
 ) {
     val viewModel: RequestDetailViewModel = hiltViewModel()
     val state = viewModel.state.collectAsState()
     val requestId = "REQ_1" // Example ID
+
+    LaunchedEffect(state.value) {
+        when (state.value) {
+            is RequestDetailState.Approved -> onApproved()
+            is RequestDetailState.Rejected -> onRejected()
+            else -> {}
+        }
+    }
+
     Box(
         Modifier
             .fillMaxSize()
@@ -61,14 +73,14 @@ fun RequestDetailScreen(
                     modifier = Modifier.align(Alignment.CenterHorizontally)
                 )
 
-                is RequestDetailState.Success -> Text(
-                    "Success",
+                is RequestDetailState.Approved -> Text(
+                    "Approved",
                     color = Color.Green,
                     modifier = Modifier.align(Alignment.CenterHorizontally)
                 )
 
-                is RequestDetailState.Error -> Text(
-                    current.message,
+                is RequestDetailState.Rejected -> Text(
+                    "Rejected",
                     color = Color.Red,
                     modifier = Modifier.align(Alignment.CenterHorizontally)
                 )
@@ -217,5 +229,9 @@ fun SlideToApproveButton(
 @Preview(showBackground = true)
 @Composable
 fun PreviewRequestDetailScreen() {
-    RequestDetailScreen()
+    RequestDetailScreen(
+        onApproved = {},
+        onRejected = {},
+        onBack = {}
+    )
 }

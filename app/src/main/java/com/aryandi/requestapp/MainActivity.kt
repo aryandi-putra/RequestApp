@@ -33,7 +33,23 @@ class MainActivity : ComponentActivity() {
                     }
                     composable("detail") {
                         RequestDetailScreen(
-                            onBack = { navController.popBackStack() }
+                            onApproved = {
+                                navController.previousBackStackEntry?.savedStateHandle?.set(
+                                    "request_result",
+                                    "approve"
+                                )
+                                navController.popBackStack()
+                            },
+                            onRejected = {
+                                navController.previousBackStackEntry?.savedStateHandle?.set(
+                                    "request_result",
+                                    "reject"
+                                )
+                                navController.popBackStack()
+                            },
+                            onBack = {
+                                navController.popBackStack()
+                            },
                         )
                     }
                 }

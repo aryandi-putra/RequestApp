@@ -12,7 +12,8 @@ import javax.inject.Inject
 sealed class RequestDetailState {
     object Idle : RequestDetailState()
     object Loading : RequestDetailState()
-    object Success : RequestDetailState()
+    object Approved : RequestDetailState()
+    object Rejected : RequestDetailState()
     data class Error(val message: String) : RequestDetailState()
 }
 
@@ -27,12 +28,15 @@ class RequestDetailViewModel @Inject constructor(
         _state.value = RequestDetailState.Loading
         viewModelScope.launch {
             val result = requestService.approveRequest(requestId)
-            _state.value = if (result.isSuccess) RequestDetailState.Success else RequestDetailState.Error(result.exceptionOrNull()?.message ?: "Unknown error")
+            _state.value =
+                if (result.isSuccess) RequestDetailState.Approved else RequestDetailState.Error(
+                    result.exceptionOrNull()?.message ?: "Unknown error"
+                )
         }
     }
 
     fun reject() {
-        _state.value = RequestDetailState.Error("Reject")
+        _state.value = RequestDetailState.Rejected
     }
 
     fun reset() {
