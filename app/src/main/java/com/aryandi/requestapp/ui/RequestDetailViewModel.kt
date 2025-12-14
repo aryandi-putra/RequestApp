@@ -17,6 +17,13 @@ sealed class RequestDetailState {
     data class Error(val message: String) : RequestDetailState()
 }
 
+sealed class RequestDetailAction {
+    data class Approve(val requestId: String) : RequestDetailAction()
+    object Reject : RequestDetailAction()
+    object Reset : RequestDetailAction()
+    // Add more actions as needed
+}
+
 @HiltViewModel
 class RequestDetailViewModel @Inject constructor(
     private val requestService: RequestService
@@ -24,22 +31,26 @@ class RequestDetailViewModel @Inject constructor(
     private val _state = MutableStateFlow<RequestDetailState>(RequestDetailState.Idle)
     val state: StateFlow<RequestDetailState> = _state
 
-    fun approve(requestId: String) {
-        _state.value = RequestDetailState.Loading
-        viewModelScope.launch {
-            val result = requestService.approveRequest(requestId)
-            _state.value =
-                if (result.isSuccess) RequestDetailState.Approved else RequestDetailState.Error(
-                    result.exceptionOrNull()?.message ?: "Unknown error"
-                )
+    fun handleAction(action: RequestDetailAction) {
+        when (action) {
+            is RequestDetailAction.Approve -> {
+                _state.value = RequestDetailState.Loading
+                viewModelScope.launch {
+                    val result = requestService.approveRequest(action.requestId)
+                    _state.value =
+                        if (result.isSuccess) RequestDetailState.Approved else RequestDetailState.Error(
+                            result.exceptionOrNull()?.message ?: "Unknown error"
+                        )
+                }
+            }
+
+            is RequestDetailAction.Reject -> {
+                _state.value = RequestDetailState.Rejected
+            }
+
+            is RequestDetailAction.Reset -> {
+                _state.value = RequestDetailState.Idle
+            }
         }
-    }
-
-    fun reject() {
-        _state.value = RequestDetailState.Rejected
-    }
-
-    fun reset() {
-        _state.value = RequestDetailState.Idle
     }
 }

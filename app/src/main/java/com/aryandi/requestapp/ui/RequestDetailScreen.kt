@@ -143,7 +143,7 @@ fun RequestDetailScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Button(
-                    onClick = { viewModel.reject() },
+                    onClick = { viewModel.handleAction(RequestDetailAction.Reject) },
                     colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.Transparent),
                     border = ButtonDefaults.outlinedButtonBorder,
                     modifier = Modifier
@@ -159,7 +159,7 @@ fun RequestDetailScreen(
                         .weight(2f)
                         .height(48.dp),
                     approved = false,
-                    onComplete = { viewModel.approve(requestId) }
+                    onComplete = { viewModel.handleAction(RequestDetailAction.Approve(requestId)) }
                 )
             }
         }
