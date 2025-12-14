@@ -53,13 +53,14 @@ fun RequestDetailScreen(
     onBack: () -> Unit = {}
 ) {
     val viewModel: RequestDetailViewModel = hiltViewModel()
+    val effect = viewModel.effect.collectAsState()
     val state = viewModel.state.collectAsState()
     val requestId = "REQ_1" // Example ID
 
-    LaunchedEffect(state.value) {
-        when (state.value) {
-            is RequestDetailState.Approved -> onApproved()
-            is RequestDetailState.Rejected -> onRejected()
+    LaunchedEffect(effect.value) {
+        when (effect.value) {
+            is RequestDetailEffect.Approved -> onApproved()
+            is RequestDetailEffect.Rejected -> onRejected()
             else -> {}
         }
     }
@@ -95,40 +96,40 @@ fun RequestDetailScreen(
             ) {
                 Column {
                     Text(
-                        text = "Heading 1",
+                        text = state.value.header,
                         color = Color.White,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        text = "Lorem ipsum dolor sit amet consectetur. Arcu tincidunt vitae cras amet. Blandit id sed et est gravida. Eu sapien amet et volutpat ultrices sed. Euismod semper mi non vitae egestas sollicitudin aliquam.",
+                        text = state.value.body,
                         color = Color.White,
                         fontSize = 14.sp
                     )
                 }
             }
             // State/Loading/Error Banner
-            when (state.value) {
-                is RequestDetailState.Loading -> Text(
+            when (effect.value) {
+                is RequestDetailEffect.Loading -> Text(
                     "Processing...",
                     color = Color.White,
                     modifier = Modifier.align(Alignment.CenterHorizontally)
                 )
 
-                is RequestDetailState.Approved -> Text(
+                is RequestDetailEffect.Approved -> Text(
                     "Approved",
                     color = Color.Green,
                     modifier = Modifier.align(Alignment.CenterHorizontally)
                 )
 
-                is RequestDetailState.Rejected -> Text(
+                is RequestDetailEffect.Rejected -> Text(
                     "Rejected",
                     color = Color.Red,
                     modifier = Modifier.align(Alignment.CenterHorizontally)
                 )
 
-                is RequestDetailState.Error -> Text(
+                is RequestDetailEffect.Error -> Text(
                     "Error Network",
                     color = Color.Red,
                     modifier = Modifier.align(Alignment.CenterHorizontally)
@@ -150,7 +151,7 @@ fun RequestDetailScreen(
                         .weight(1f)
                         .height(48.dp),
                     shape = RoundedCornerShape(12.dp),
-                    enabled = state.value !is RequestDetailState.Loading
+                    enabled = effect.value !is RequestDetailEffect.Loading
                 ) {
                     Text(text = "Reject", color = Color.White)
                 }
@@ -159,7 +160,7 @@ fun RequestDetailScreen(
                         .weight(2f)
                         .height(48.dp),
                     approved = false,
-                    onComplete = { viewModel.handleAction(RequestDetailAction.Approve(requestId)) }
+                    onComplete = { viewModel.handleAction(RequestDetailAction.Approve) }
                 )
             }
         }

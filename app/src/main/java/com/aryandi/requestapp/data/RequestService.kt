@@ -1,5 +1,6 @@
 package com.aryandi.requestapp.data
 
 interface RequestService {
-    suspend fun approveRequest(requestId: String): Result<Unit>
+    suspend fun getNewRequest(): Result<Request>
+    suspend fun approveRequest(): Result<Unit>
 }

@@ -1,5 +1,6 @@
 package com.aryandi.requestapp.ui
 
+import com.aryandi.requestapp.data.Request
 import com.aryandi.requestapp.data.RequestService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -13,7 +14,16 @@ import org.junit.Assert.*
 
 class FakeRequestService : RequestService {
     var shouldSucceed = true
-    override suspend fun approveRequest(requestId: String): Result<Unit> {
+    override suspend fun getNewRequest(): Result<Request> {
+        return if (shouldSucceed) Result.success(
+            Request(
+                "REQ_42",
+                "Sample Request"
+            )
+        ) else Result.failure(Exception("request failed"))
+    }
+
+    override suspend fun approveRequest(): Result<Unit> {
         return if (shouldSucceed) Result.success(Unit) else Result.failure(Exception("Simulated failure"))
     }
 }
@@ -36,26 +46,26 @@ class RequestDetailViewModelTest {
     @Test
     fun `successful approval triggers Approved state`() = runTest {
         fakeService.shouldSucceed = true
-        viewModel.handleAction(RequestDetailAction.Approve("REQ_42"))
+        viewModel.handleAction(RequestDetailAction.Approve)
         advanceUntilIdle()
-        val state = viewModel.state.value
-        assertTrue(state is RequestDetailState.Approved)
+        val state = viewModel.effect.value
+        assertTrue(state is RequestDetailEffect.Approved)
     }
 
     @Test
     fun `failed approval triggers Error state`() = runTest {
         fakeService.shouldSucceed = false
-        viewModel.handleAction(RequestDetailAction.Approve("REQ_43"))
+        viewModel.handleAction(RequestDetailAction.Approve)
         advanceUntilIdle()
-        val state = viewModel.state.value
-        assertTrue(state is RequestDetailState.Error)
-        assertTrue((state as RequestDetailState.Error).message.contains("Simulated failure"))
+        val state = viewModel.effect.value
+        assertTrue(state is RequestDetailEffect.Error)
+        assertTrue((state as RequestDetailEffect.Error).message.contains("Simulated failure"))
     }
 
     @Test
     fun `rejection triggers Rejected state`() = runTest {
         viewModel.handleAction(RequestDetailAction.Reject)
-        val state = viewModel.state.value
-        assertTrue(state is RequestDetailState.Rejected)
+        val state = viewModel.effect.value
+        assertTrue(state is RequestDetailEffect.Rejected)
     }
 }
