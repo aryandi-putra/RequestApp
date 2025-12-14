@@ -28,7 +28,8 @@ class MainActivity : ComponentActivity() {
                 NavHost(navController = navController, startDestination = "list") {
                     composable("list") {
                         RequestListScreen(
-                            onCreateNewRequest = { navController.navigate("detail") }
+                            onCreateNewRequest = { navController.navigate("detail") },
+                            navController = navController
                         )
                     }
                     composable("detail") {
