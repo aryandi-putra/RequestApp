@@ -1,10 +1,14 @@
 package com.aryandi.requestapp.ui
 
+import android.util.Log
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @Stable
@@ -16,34 +20,36 @@ sealed class RequestListAction {
     // Extend with other actions as needed
 }
 
-sealed class RequestListState {
-    object Idle : RequestListState()
-    object CreatedRequest : RequestListState()
-    object ShowGreenSnackbar : RequestListState()
-    object ShowRedSnackbar : RequestListState()
+sealed class RequestListEvent {
+    object CreatedRequest : RequestListEvent()
+    object ShowGreenSnackbar : RequestListEvent()
+    object ShowRedSnackbar : RequestListEvent()
 }
 
 @HiltViewModel
 class RequestListViewModel @Inject constructor() : ViewModel() {
 
-    private val _state = MutableStateFlow<RequestListState>(RequestListState.Idle)
-    val state: StateFlow<RequestListState> = _state
+    private val _events = MutableSharedFlow<RequestListEvent>()
+    val events: SharedFlow<RequestListEvent> = _events.asSharedFlow()
 
     fun handleAction(action: RequestListAction) {
-        when (action) {
-            is RequestListAction.OnCreateRequestClick -> {
-                _state.value = RequestListState.CreatedRequest
-            }
+        viewModelScope.launch {
+            when (action) {
+                is RequestListAction.OnCreateRequestClick -> {
+                    _events.emit(RequestListEvent.CreatedRequest)
+                }
 
-            RequestListAction.OnApproved -> {
-                _state.value = RequestListState.ShowGreenSnackbar
-            }
-            RequestListAction.OnRejected -> {
-                _state.value = RequestListState.ShowRedSnackbar
-            }
+                RequestListAction.OnApproved -> {
+                    _events.emit(RequestListEvent.ShowGreenSnackbar)
+                }
 
-            RequestListAction.Reset -> {
-                _state.value = RequestListState.Idle
+                RequestListAction.OnRejected -> {
+                    _events.emit(RequestListEvent.ShowRedSnackbar)
+                }
+
+                RequestListAction.Reset -> {
+                    // No-op for events, or handle if needed
+                }
             }
         }
     }

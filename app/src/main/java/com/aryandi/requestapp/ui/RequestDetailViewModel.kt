@@ -1,18 +1,21 @@
 package com.aryandi.requestapp.ui
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aryandi.requestapp.data.RequestService
 import com.aryandi.requestapp.ui.RequestDetailEffect.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 sealed class RequestDetailEffect {
-    object Idle : RequestDetailEffect()
-    object Loading : RequestDetailEffect()
     object Approved : RequestDetailEffect()
     object Rejected : RequestDetailEffect()
     data class Error(val message: String) : RequestDetailEffect()
@@ -26,57 +29,71 @@ sealed class RequestDetailAction {
     // Add more actions as needed
 }
 
-data class MessageUiState(val header: String = "", val body: String = "")
+data class RequestDetailState(
+    val header: String = "",
+    val body: String = "",
+    val isLoading: Boolean = false
+)
 
 @HiltViewModel
 class RequestDetailViewModel @Inject constructor(
-    private val requestService: RequestService
+    private val requestService: RequestService,
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(MessageUiState())
-    val state: StateFlow<MessageUiState> = _uiState
 
-    private val _effect = MutableStateFlow<RequestDetailEffect>(Idle)
-    val effect: StateFlow<RequestDetailEffect> = _effect
+    private val _state = MutableStateFlow(RequestDetailState())
+    val state: StateFlow<RequestDetailState> = _state
+
+    private val _effects = MutableSharedFlow<RequestDetailEffect>()
+    val effects: SharedFlow<RequestDetailEffect> = _effects.asSharedFlow()
 
     init {
         handleAction(RequestDetailAction.GetRequest)
     }
 
     fun handleAction(action: RequestDetailAction) {
-        when (action) {
-            RequestDetailAction.GetRequest -> {
-                _effect.value = Loading
-                viewModelScope.launch {
+        viewModelScope.launch {
+            when (action) {
+                RequestDetailAction.GetRequest -> {
+                    _state.update { it.copy(isLoading = true) }
                     val result = requestService.getNewRequest()
                     if (result.isSuccess) {
-                        _effect.value = Idle
-                        _uiState.value = MessageUiState(
-                            result.getOrNull()?.heading ?: "",
-                            result.getOrNull()?.content ?: ""
+                        _state.update {
+                            it.copy(
+                                isLoading = false,
+                                header = result.getOrNull()?.heading ?: "",
+                                body = result.getOrNull()?.content ?: ""
+                            )
+                        }
+                    } else {
+                        _state.update { it.copy(isLoading = false) }
+                        _effects.emit(RequestDetailEffect.Error("Failed to load request"))
+                    }
+                }
+
+                is RequestDetailAction.Approve -> {
+                    _state.update { it.copy(isLoading = true) }
+                    val result = requestService.approveRequest()
+                    _state.update { it.copy(isLoading = false) }
+                    if (result.isSuccess) {
+                        _effects.emit(Approved)
+                    } else {
+                        _effects.emit(
+                            Error(
+                                result.exceptionOrNull()?.message ?: "Unknown error"
+                            )
                         )
                     }
                 }
-            }
 
-            is RequestDetailAction.Approve -> {
-                _effect.value = Loading
-                viewModelScope.launch {
-                    val result = requestService.approveRequest()
-                    _effect.value =
-                        if (result.isSuccess) Approved else Error(
-                            result.exceptionOrNull()?.message ?: "Unknown error"
-                        )
+                is RequestDetailAction.Reject -> {
+                    _effects.emit(Rejected)
+                }
+
+                is RequestDetailAction.Reset -> {
+                    // Handle reset if needed
                 }
             }
-
-            is RequestDetailAction.Reject -> {
-                _effect.value = Rejected
-            }
-
-            is RequestDetailAction.Reset -> {
-                _effect.value = Idle
-            }
-
         }
     }
 }

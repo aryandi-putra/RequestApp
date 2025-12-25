@@ -48,20 +48,26 @@ private val ApproveArrow = Color(0xFF3CA1AF)
 
 @Composable
 fun RequestDetailScreen(
-    onApproved: () -> Unit = {},
-    onRejected: () -> Unit = {},
+    onResult: (RequestResult) -> Unit = {},
     onBack: () -> Unit = {}
 ) {
     val viewModel: RequestDetailViewModel = hiltViewModel()
-    val effect = viewModel.effect.collectAsState()
     val state = viewModel.state.collectAsState()
-    val requestId = "REQ_1" // Example ID
 
-    LaunchedEffect(effect.value) {
-        when (effect.value) {
-            is RequestDetailEffect.Approved -> onApproved()
-            is RequestDetailEffect.Rejected -> onRejected()
-            else -> {}
+    LaunchedEffect(Unit) {
+        viewModel.effects.collect { effect ->
+            when (effect) {
+                is RequestDetailEffect.Approved -> {
+                    onResult(RequestResult.APPROVED)
+                    onBack()
+                }
+                is RequestDetailEffect.Rejected -> {
+                    onResult(RequestResult.REJECTED)
+                    onBack()
+                }
+                is RequestDetailEffect.Error -> {
+                }
+            }
         }
     }
 
@@ -110,31 +116,12 @@ fun RequestDetailScreen(
                 }
             }
             // State/Loading/Error Banner
-            when (effect.value) {
-                is RequestDetailEffect.Loading -> Text(
+            if (state.value.isLoading) {
+                Text(
                     "Processing...",
                     color = Color.White,
                     modifier = Modifier.align(Alignment.CenterHorizontally)
                 )
-
-                is RequestDetailEffect.Approved -> Text(
-                    "Approved",
-                    color = Color.Green,
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                )
-
-                is RequestDetailEffect.Rejected -> Text(
-                    "Rejected",
-                    color = Color.Red,
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                )
-
-                is RequestDetailEffect.Error -> Text(
-                    "Error Network",
-                    color = Color.Red,
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                )
-                else -> {}
             }
             Spacer(Modifier.height(24.dp))
             // Buttons Row
@@ -151,7 +138,7 @@ fun RequestDetailScreen(
                         .weight(1f)
                         .height(48.dp),
                     shape = RoundedCornerShape(12.dp),
-                    enabled = effect.value !is RequestDetailEffect.Loading
+                    enabled = !state.value.isLoading
                 ) {
                     Text(text = "Reject", color = Color.White)
                 }
@@ -245,8 +232,6 @@ fun SlideToApproveButton(
 @Composable
 fun PreviewRequestDetailScreen() {
     RequestDetailScreen(
-        onApproved = {},
-        onRejected = {},
         onBack = {}
     )
 }

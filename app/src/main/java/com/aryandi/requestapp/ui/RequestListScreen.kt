@@ -1,5 +1,6 @@
 package com.aryandi.requestapp.ui
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -44,11 +45,10 @@ private val TitleBlue = Color(0xFF396882) // Matches your mockup
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun RequestListScreen(
-    onCreateNewRequest: () -> Unit = {},
-    navController: NavController
+    result: RequestResult? = null,
+    onNavigateToDetail: (String) -> Unit = {}
 ) {
     val viewModel: RequestListViewModel = hiltViewModel()
-    val state = viewModel.state.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
     val (snackbarMessage, setSnackbarMessage) = remember {
@@ -58,37 +58,40 @@ fun RequestListScreen(
     }
     val (snackbarColor, setSnackbarColor) = remember { androidx.compose.runtime.mutableStateOf(Color.Unspecified) }
 
-    LaunchedEffect(state.value) {
-        when (state.value) {
-            RequestListState.ShowGreenSnackbar -> {
+    LaunchedEffect(result) {
+        when (result) {
+            RequestResult.APPROVED -> {
+                Log.d("NavigationDebug", "Showing approved snackbar")
                 setSnackbarMessage("Request approved")
                 setSnackbarColor(Color(0xFFA2DEB4))
             }
-
-            RequestListState.ShowRedSnackbar -> {
+            RequestResult.REJECTED -> {
+                Log.d("NavigationDebug", "Showing rejected snackbar")
                 setSnackbarMessage("Request rejected")
                 setSnackbarColor(Color(0xFFF0B7B7))
             }
-            RequestListState.CreatedRequest -> {
-                onCreateNewRequest()
-                viewModel.handleAction(RequestListAction.Reset)
-            }
-
-            RequestListState.Idle -> {}
+            null -> {}
         }
     }
 
-    // Listen for request_result
-    LaunchedEffect(navController) {
-        navController.currentBackStackEntry?.savedStateHandle?.getLiveData<String>("request_result")
-            ?.observeForever { result ->
-                if (result == NavKeys.NavEvent.APPROVE) {
-                    viewModel.handleAction(RequestListAction.OnApproved)
-                } else if (result == NavKeys.NavEvent.REJECT) {
-                    viewModel.handleAction(RequestListAction.OnRejected)
+    // Separate LaunchedEffect for CreateRequest events only
+    LaunchedEffect(Unit) {
+        Log.d("NavigationDebug", "Starting event collection in LaunchedEffect(Unit)")
+        viewModel.events.collect { event ->
+            Log.d("NavigationDebug", "Event received in LaunchedEffect: $event")
+            // Only handle CreatedRequest here
+            // Approved/Rejected are handled directly in LaunchedEffect(result) above
+            when (event) {
+                RequestListEvent.CreatedRequest -> {
+                    Log.d("NavigationDebug", "Handling CreatedRequest - navigating to detail")
+                    onNavigateToDetail("REQ_123") // Example ID
+                    viewModel.handleAction(RequestListAction.Reset)
                 }
-                navController.currentBackStackEntry?.savedStateHandle?.remove<String>("request_result")
+                else -> {
+                    Log.d("NavigationDebug", "Ignoring other events (handled by LaunchedEffect(result)): $event")
+                }
             }
+        }
     }
 
     Box(Modifier.fillMaxSize()) {
@@ -186,5 +189,5 @@ fun RequestListScreen(
 @Preview(showBackground = true)
 @Composable
 fun PreviewRequestListScreen() {
-    RequestListScreen(navController = rememberNavController())
+    RequestListScreen(onNavigateToDetail = {})
 }

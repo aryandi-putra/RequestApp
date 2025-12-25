@@ -4,18 +4,17 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.aryandi.requestapp.ui.theme.RequestAppTheme
 import com.aryandi.requestapp.ui.RequestListScreen
 import com.aryandi.requestapp.ui.RequestDetailScreen
+import com.aryandi.requestapp.ui.Route
 import dagger.hilt.android.AndroidEntryPoint
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import com.aryandi.requestapp.ui.NavKeys
+import androidx.navigation3.ui.NavDisplay
+import androidx.navigation3.runtime.NavEntry
+import androidx.navigation3.runtime.rememberNavBackStack
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -24,38 +23,50 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             RequestAppTheme {
-                val navController = rememberNavController()
-                NavHost(
-                    navController = navController,
-                    startDestination = NavKeys.NavRoute.REQUEST_LIST
-                ) {
-                    composable(NavKeys.NavRoute.REQUEST_LIST) {
-                        RequestListScreen(
-                            onCreateNewRequest = { navController.navigate(NavKeys.NavRoute.REQUEST_DETAIL) },
-                            navController = navController
-                        )
+                val backstack = rememberNavBackStack(Route.RequestList())
+                
+                NavDisplay(
+                    backStack = backstack,
+                    onBack = {
+                        if (backstack.size > 1) {
+                            backstack.removeAt(backstack.size - 1)
+                        }
                     }
-                    composable(NavKeys.NavRoute.REQUEST_DETAIL) {
-                        RequestDetailScreen(
-                            onApproved = {
-                                navController.previousBackStackEntry?.savedStateHandle?.set(
-                                    NavKeys.NavResult.REQUEST,
-                                    NavKeys.NavEvent.APPROVE
-                                )
-                                navController.popBackStack()
-                            },
-                            onRejected = {
-                                navController.previousBackStackEntry?.savedStateHandle?.set(
-                                    NavKeys.NavResult.REQUEST,
-                                    NavKeys.NavEvent.REJECT
-                                )
-                                navController.popBackStack()
-                            },
-                            onBack = {
-                                navController.popBackStack()
-                            },
-                        )
-                    }
+                ) { key ->
+                    val route = key as Route
+                    NavEntry(
+                        key = route,
+                        content = {
+                            when (route) {
+                                is Route.RequestList -> {
+                                    RequestListScreen(
+                                        result = route.result,
+                                        onNavigateToDetail = { id ->
+                                            backstack[0] = Route.RequestList(result = null)
+                                            backstack.add(Route.RequestDetail(requestId = id))
+                                        }
+                                    )
+                                }
+                                is Route.RequestDetail -> {
+                                    RequestDetailScreen(
+                                        onResult = { result ->
+                                            if (backstack.size > 1) {
+                                                // Remove the detail screen
+                                                backstack.removeAt(backstack.size - 1)
+                                                // Update the RequestList route in the backstack with the result
+                                                backstack[0] = Route.RequestList(result = result)
+                                            }
+                                        },
+                                        onBack = {
+                                            if (backstack.size > 1) {
+                                                backstack.removeAt(backstack.size - 1)
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    )
                 }
             }
         }
